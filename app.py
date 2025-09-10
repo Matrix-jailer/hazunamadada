@@ -267,10 +267,17 @@ async def check_cards_path(cards: str):
     
     return results
 
-@app.post("/ccngate", response_model=List[CCResponse])
-async def check_cards_body(request: CCRequest):
-    # Parse cards from request body
-    card_list = request.cards.split(",")[:5]  # Max 5 cards
+# Add this GET endpoint below your existing POST /ccngate endpoint
+
+@app.get("/ccngate/{cards}", response_model=List[CCResponse])
+async def check_cards_get(cards: str):
+    """
+    Browser-friendly GET endpoint.
+    Accepts single or multiple cards separated by comma:
+    e.g., 5154628580794783|06|2027|579
+    or multiple: 5154628580794783|06|2027|579,4242424242424242|12|2026|123
+    """
+    card_list = cards.split(",")
     
     results = []
     session = None
@@ -291,11 +298,10 @@ async def check_cards_body(request: CCRequest):
         )
         
         # Process each card
-        for card in card_list:
+        for card in card_list[:5]:  # max 5 cards
             if card.strip():
                 result = await create_payment_method(card.strip(), session, proxy_url)
                 results.append(result)
-                # Small delay between requests
                 await asyncio.sleep(random.uniform(1, 2))
         
     except Exception as e:
@@ -305,7 +311,3 @@ async def check_cards_body(request: CCRequest):
             await session.aclose()
     
     return results
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
