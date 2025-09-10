@@ -290,8 +290,10 @@ async def check_cards_get(cards: str):
             user = user.replace("session-RANDOMID", f"session-{uuid.uuid4().hex}")
         proxy_url = f"http://{user}:{pwd}@{host}:{port}"
         
+        # Configure proxy using mounts
+        proxy_transport = HTTPTransport(proxy=proxy_url)
         session = httpx.AsyncClient(
-            proxy=proxy_url,
+            transports=[proxy_transport],
             timeout=httpx.Timeout(60.0),
             trust_env=False,
             follow_redirects=True,
@@ -303,7 +305,7 @@ async def check_cards_get(cards: str):
                 result = await create_payment_method(card.strip(), session, proxy_url)
                 results.append(result)
                 await asyncio.sleep(random.uniform(1, 2))
-        
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
@@ -311,3 +313,4 @@ async def check_cards_get(cards: str):
             await session.aclose()
     
     return results
+
