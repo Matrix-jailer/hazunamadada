@@ -293,7 +293,7 @@ async def check_cards_get(cards: str):
         # Configure proxy using mounts
         proxy_transport = httpx.AsyncHTTPTransport(proxy=proxy_url)
         session = httpx.AsyncClient(
-            transports=[proxy_transport],
+            transport=[proxy_transport],
             timeout=httpx.Timeout(60.0),
             trust_env=False,
             follow_redirects=True,
