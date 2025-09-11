@@ -160,6 +160,10 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
                 return {"card": fullz, "status": "invalid_cvv", "message": "INVALID CVV", "proxy_used": proxy_url}
             elif error_message == "Your card was declined.":
                 return {"card": fullz, "status": "declined", "message": "Card Declined", "proxy_used": proxy_url}
+            elif error_message == "We're not able to add this payment method. Please refresh the page and try again.":
+                return {"card": fullz, "status": "unknown", "message": "Card Declined", "proxy_used": proxy_url}
+            elif error_message == "Your card has expired.":
+                return {"card": fullz, "status": "declined", "message": "Your card has expired.", "proxy_used": proxy_url}
             elif error_message == "Your card number is incorrect.":
                 return {"card": fullz, "status": "invalid_card", "message": "Incorrect card number", "proxy_used": proxy_url}
             elif error_message == "Your card does not support this type of purchase.":
