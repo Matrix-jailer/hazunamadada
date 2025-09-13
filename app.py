@@ -160,6 +160,16 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
                 return {"card": fullz, "status": "invalid_cvv", "message": "INVALID CVV", "proxy_used": proxy_url}
             elif error_message == "Your card was declined.":
                 return {"card": fullz, "status": "declined", "message": "Card Declined", "proxy_used": proxy_url}
+            elif error_message == "Your card was declined. You can call your bank for details.":
+                return {"card": fullz, "status": "declined", "message": "Card Declined", "proxy_used": proxy_url}
+            elif error_message == "Invalid account.":
+                return {"card": fullz, "status": "declined", "message": "Invalid Account", "proxy_used": proxy_url}
+            elif error_message == "Invalid account.":
+                return {"card": fullz, "status": "declined", "message": "Invalid Account", "proxy_used": proxy_url}
+            elif error_message == "502 Zone has reached usage limit":
+                return {"card": fullz, "status": "error", "message": "Proxy Error", "proxy_used": proxy_url}
+            elif error_message == "An error occurred while processing your card. Try again in a little bit.":
+                return {"card": fullz, "status": "error", "message": "Card Error", "proxy_used": proxy_url}
             elif error_message == "We're not able to add this payment method. Please refresh the page and try again.":
                 return {"card": fullz, "status": "unknown", "message": "Card Declined", "proxy_used": proxy_url}
             elif error_message == "Your card has expired.":
