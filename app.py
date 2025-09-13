@@ -158,9 +158,11 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
             elif status == "order_id":
                 return {"card": fullz, "status": "charged", "message": "CCN $5 Charged", "proxy_used": proxy_url}
             elif status == "requires_action":
-                return {"card": fullz, "status": "success", "message": "CCN ADDED SUCCESSFULLY (3DS/OTP)", "proxy_used": proxy_url}
-            elif error_message == "Your card's security code is incorrect.":
+                return {"card": fullz, "status": "success", "message": "CCN (3DS/OTP)", "proxy_used": proxy_url}
+            elif error_message == "Your card's security code is invalid.":
                 return {"card": fullz, "status": "invalid_cvv", "message": "INVALID CVV", "proxy_used": proxy_url}
+            elif error_message == "Your card's security code is incorrect.":
+                return {"card": fullz, "status": "unknown", "message": "INVALID CVV", "proxy_used": proxy_url}
             elif error_message == "Your card was declined.":
                 return {"card": fullz, "status": "declined", "message": "Card Declined", "proxy_used": proxy_url}
             elif error_message == "Your card was declined. You can call your bank for details.":
