@@ -155,6 +155,8 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
 
             if result.get("success") and status == "succeeded":
                 return {"card": fullz, "status": "success", "message": "CCN ADDED SUCCESSFULLY", "proxy_used": proxy_url}
+            elif error_message == "Your card has insufficient funds.":
+                return {"card": fullz, "status": "success", "message": "Insufficient Funds", "proxy_used": proxy_url}
             elif status == "order_id":
                 return {"card": fullz, "status": "charged", "message": "CCN $5 Charged", "proxy_used": proxy_url}
             elif status == "requires_action":
