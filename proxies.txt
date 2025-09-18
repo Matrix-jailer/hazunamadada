@@ -1,1 +1,1 @@
-proxy.oculus-proxy.com:31111:oc-706e613fc085009b61e18f3622f7cdd5b6c118c24ce823e339f7be7afe4f0156-country-us-session-RANDOMID:72oi86vn6sbk
+evo-pro.porterproxies.com:62345:PP_UOGGREX3VD-country-US:cvdjiy52
