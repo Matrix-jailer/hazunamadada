@@ -1,1 +1,1 @@
-proxy.oculus-proxy.com:31113:oc-270ac9753d6ffefe9a31826c92001901263ccc1552d1e307adb41d18dace3b11-country-us-session-RANDOMID:7la1gdy2udi7
+proxy.oculus-proxy.com:31111:oc-706e613fc085009b61e18f3622f7cdd5b6c118c24ce823e339f7be7afe4f0156-country-us-session-RANDOMID:72oi86vn6sbk
