@@ -193,6 +193,23 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
         return {"card": fullz, "status": "error", "message": str(e), "proxy_used": proxy_url}
 
 # ---------------------------
+# Concurrent helper (one proxy/session per card)
+# ---------------------------
+async def _check_card_with_own_proxy(card: str, sem: asyncio.Semaphore):
+    card = card.strip()
+    if not card:
+        return None
+
+    # limit concurrency so we don't open too many sessions at once
+    async with sem:
+        proxy_line = random.choice(load_proxies())
+        session, proxy_url = await get_session(proxy_line)
+        try:
+            return await create_payment_method(card, session, proxy_url)
+        finally:
+            await session.aclose()
+
+# ---------------------------
 # API ENDPOINTS
 # ---------------------------
 @app.get("/")
@@ -201,31 +218,26 @@ async def root():
 
 @app.get("/ccngate/{cards}", response_model=List[CCResponse])
 async def check_cards_get(cards: str):
-    card_list = cards.split(",")[:5]
-    proxy_line = random.choice(load_proxies())
-    session, proxy_url = await get_session(proxy_line)
+    card_list = [c.strip() for c in cards.split(",") if c.strip()][:5]
 
-    results = []
-    for card in card_list:
-        if card.strip():
-            res = await create_payment_method(card.strip(), session, proxy_url)
-            results.append(res)
-    await session.aclose()
-    return results
+    # set concurrency limit (tune this to your environment / proxy provider limits)
+    concurrency = min(5, len(card_list))
+    sem = asyncio.Semaphore(concurrency)
+
+    tasks = [asyncio.create_task(_check_card_with_own_proxy(card, sem)) for card in card_list]
+    results = await asyncio.gather(*tasks)
+    return [r for r in results if r is not None]
 
 @app.post("/ccngate", response_model=List[CCResponse])
 async def check_cards_post(request: CCRequest):
-    card_list = request.cards.split(",")[:5]
-    proxy_line = random.choice(load_proxies())
-    session, proxy_url = await get_session(proxy_line)
+    card_list = [c.strip() for c in request.cards.split(",") if c.strip()][:5]
 
-    results = []
-    for card in card_list:
-        if card.strip():
-            res = await create_payment_method(card.strip(), session, proxy_url)
-            results.append(res)
-    await session.aclose()
-    return results
+    concurrency = min(5, len(card_list))
+    sem = asyncio.Semaphore(concurrency)
+
+    tasks = [asyncio.create_task(_check_card_with_own_proxy(card, sem)) for card in card_list]
+    results = await asyncio.gather(*tasks)
+    return [r for r in results if r is not None]
 
 # ---------------------------
 # RUN
