@@ -70,7 +70,7 @@ async def get_session(proxy_line: str):
     proxy_url = f"http://{user}:{pwd}@{host}:{port}"
     
     session = httpx.AsyncClient(
-        proxy=proxy_url,
+        proxies={"http://": proxy_url, "https://": proxy_url},
         timeout=httpx.Timeout(60.0),
         trust_env=False,
         follow_redirects=True
