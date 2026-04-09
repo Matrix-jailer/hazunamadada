@@ -1,1 +1,1 @@
-proxy.oculus-proxy.com:31113:oc-78469a16bec8c6fa376cb4d47c4e3bfdbf9e0b905dc585cfb37887a0dbf968c7-country-us-session-2ee0a:9tbf5cudx7gl
+core-us.aura-solutions.io:8603:pkg-private2-country-us:aj11f4n61xyva0a2
